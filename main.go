@@ -4,8 +4,8 @@
 
 package main
 
-import "fmt"
+import "github.com/nullzeiger/pwdcli/internal/cli"
 
 func main() {
-	fmt.Println("Hello, World!")
+	cli.Run()
 }
