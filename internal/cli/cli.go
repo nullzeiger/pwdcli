@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package cli provides command-line interface utilities for pwd management
+// Package cli provides the command-line interface used for interacting
+// with the password management system. It handles parsing flags,
+// dispatching commands, and coordinating with the underlying handling
+// and storage layers.
 package cli
 
 import (
@@ -10,18 +13,22 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/nullzeiger/pwdcli/internal/filehandling"
-	"github.com/nullzeiger/pwdcli/internal/pwdhandling"
+	handling "github.com/nullzeiger/pwdcli/internal/handling"
+	"github.com/nullzeiger/pwdcli/internal/storage"
 )
 
+// Run is the main entry point for the CLI. It defines and parses flags,
+// ensures the storage file exists, and dispatches the appropriate action
+// based on the user’s command-line arguments.
 func Run() {
-	// Commands
+	// --- Command Flags ---
+	// Basic operations
 	listFlag := flag.Bool("all", false, "List all password entries")
 	addFlag := flag.Bool("add", false, "Add a new password entry")
 	deleteFlag := flag.Int("delete", -1, "Delete an entry by index")
 	searchFlag := flag.String("search", "", "Search entries by keyword")
 
-	// Fields for -add
+	// Fields required when using -add
 	website := flag.String("website", "", "Website (required for -add)")
 	username := flag.String("username", "", "Username (required for -add)")
 	email := flag.String("email", "", "Email (required for -add)")
@@ -29,15 +36,16 @@ func Run() {
 
 	flag.Parse()
 
-	// Ensure ~/.passwords.json exists
-	if err := filehandling.Create(); err != nil {
+	// Ensure the storage file exists (~/.passwords.json)
+	// If it doesn't, it is automatically created.
+	if err := storage.Create(); err != nil {
 		fmt.Println("Error creating password file:", err)
 		return
 	}
 
-	// LIST
+	// --- LIST COMMAND ---
 	if *listFlag {
-		entries, err := pwdhandling.All()
+		entries, err := handling.All()
 		if err != nil {
 			fmt.Println("Error:", err)
 			return
@@ -48,21 +56,24 @@ func Run() {
 		return
 	}
 
-	// ADD
+	// --- ADD COMMAND ---
 	if *addFlag {
+		// Validate required fields
 		if *website == "" || *username == "" || *email == "" || *password == "" {
 			fmt.Println("Missing fields for -add: --website --username --email --pwd")
 			os.Exit(1)
 		}
 
-		newEntry := pwdhandling.Pwd{
+		// Construct new entry
+		newEntry := handling.Act{
 			Website:  *website,
 			Username: *username,
 			Email:    *email,
 			Pwd:      *password,
 		}
 
-		if err := pwdhandling.Create(newEntry); err != nil {
+		// Save the new entry
+		if err := handling.Create(newEntry); err != nil {
 			fmt.Println("Error:", err)
 			return
 		}
@@ -71,9 +82,9 @@ func Run() {
 		return
 	}
 
-	// DELETE
+	// --- DELETE COMMAND ---
 	if *deleteFlag >= 0 {
-		ok, err := pwdhandling.Delete(*deleteFlag)
+		ok, err := handling.Delete(*deleteFlag)
 		if err != nil {
 			fmt.Println("Error:", err)
 			return
@@ -84,24 +95,29 @@ func Run() {
 		return
 	}
 
-	// SEARCH
+	// --- SEARCH COMMAND ---
 	if *searchFlag != "" {
-		matches, err := pwdhandling.Search(*searchFlag)
+		matches, err := handling.Search(*searchFlag)
 		if err != nil {
 			fmt.Println("Error:", err)
 		}
 
+		// No results found
 		if len(matches) == 0 {
 			fmt.Println("No results found.")
 			return
 		}
 
+		// Print matching entries
 		for _, m := range matches {
-			fmt.Printf("[%d] Website: %s Username: %s Email: %s Password: %s\n",
-				m.Index, m.Account.Website, m.Account.Username, m.Account.Email, m.Account.Pwd)
+			fmt.Printf(
+				"[%d] Website: %s Username: %s Email: %s Password: %s\n",
+				m.Index, m.Account.Website, m.Account.Username, m.Account.Email, m.Account.Pwd,
+			)
 		}
-
+		return
 	}
 
+	// If no command was matched, print usage help.
 	flag.Usage()
 }
