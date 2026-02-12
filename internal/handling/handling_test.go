@@ -23,6 +23,9 @@ func setupTempStorage(t *testing.T) string {
 	tmpDir := t.TempDir()
 	t.Setenv("HOME", tmpDir)
 
+	// Set a master password for tests
+	storage.SetMasterPassword("Passwordsupersicura")
+
 	// Initialize the storage file
 	if err := storage.Create(); err != nil {
 		t.Fatalf("storage.Create() failed: %v", err)
@@ -37,6 +40,9 @@ func TestCreateAndAll(t *testing.T) {
 	setupTempStorage(t)
 
 	acc := handling.Act{Website: "example.com", Username: "user", Email: "a@b.com", Pwd: "123"}
+
+	// Set a master password for tests
+	storage.SetMasterPassword("Passwordsupersicura")
 
 	// Create a new account
 	if err := handling.Create(acc); err != nil {
@@ -69,6 +75,9 @@ func TestDelete(t *testing.T) {
 	acc1 := handling.Act{Website: "site1", Username: "u1", Email: "e1", Pwd: "p1"}
 	acc2 := handling.Act{Website: "site2", Username: "u2", Email: "e2", Pwd: "p2"}
 
+	// Set a master password for tests
+	storage.SetMasterPassword("Passwordsupersicura")
+
 	handling.Create(acc1)
 	handling.Create(acc2)
 
@@ -98,6 +107,9 @@ func TestSearch(t *testing.T) {
 
 	acc1 := handling.Act{Website: "google.com", Username: "user1", Email: "a@b.com", Pwd: "pass1"}
 	acc2 := handling.Act{Website: "example.com", Username: "user2", Email: "c@d.com", Pwd: "pass2"}
+
+	// Set a master password for tests
+	storage.SetMasterPassword("Passwordsupersicura")
 
 	handling.Create(acc1)
 	handling.Create(acc2)
