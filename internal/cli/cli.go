@@ -27,15 +27,15 @@ import (
 func Run() {
 	// Flag Definitions.
 	listFlag := flag.Bool("all", false, "List all password entries")
-	addFlag := flag.Bool("add", false, "Add a new password entry")
+	addFlag := flag.Bool("add", false, "Add a new password entry(-website -username -email -pwd) Use \"\" to escape special characters")
 	deleteFlag := flag.Int("delete", -1, "Delete an entry by index")
 	searchFlag := flag.String("search", "", "Search entries by keyword")
 
 	// Fields required for adding a new entry.
-	website := flag.String("website", "", "Website URL or name (required for -add)")
-	username := flag.String("username", "", "Account username (required for -add)")
-	email := flag.String("email", "", "Account email (required for -add)")
-	password := flag.String("pwd", "", "Account password (required for -add)")
+	website := flag.String("website", "", "Website URL or name (required for -add) Position number 1")
+	username := flag.String("username", "", "Account username (required for -add) Position number 2")
+	email := flag.String("email", "", "Account email (required for -add) Position number 3")
+	password := flag.String("pwd", "", "Account password (required for -add) Position number 4")
 
 	flag.Parse()
 
@@ -45,26 +45,13 @@ func Run() {
 		return
 	}
 
-	// Prompt for the master password to initialize storage access.
-	fmt.Print("Master password: ")
-	master, err := readPassword()
-	if err != nil {
-		fmt.Println("Error reading password:", err)
-		return
-	}
-
-	if master == "" {
-		fmt.Println("Master password cannot be empty")
-		return
-	}
-
-	storage.SetMasterPassword(master)
-
 	// Create or verify the existence of the underlying storage file.
 	if err := storage.Create(); err != nil {
 		fmt.Println("Error creating password file:", err)
 		return
 	}
+
+	requireMasterPassword()
 
 	// Execute LIST command.
 	if *listFlag {
@@ -76,6 +63,7 @@ func Run() {
 		for _, e := range entries {
 			fmt.Println(e)
 		}
+
 		return
 	}
 
@@ -136,6 +124,23 @@ func Run() {
 		}
 		return
 	}
+}
+
+func requireMasterPassword() {
+	// Prompt for the master password to initialize storage access.
+	fmt.Print("Master password: ")
+	master, err := readPassword()
+	if err != nil {
+		fmt.Println("Error reading password:", err)
+		return
+	}
+
+	if master == "" {
+		fmt.Println("Master password cannot be empty")
+		return
+	}
+
+	storage.SetMasterPassword(master)
 }
 
 // readPassword reads a password from stdin without echoing characters to the terminal.
