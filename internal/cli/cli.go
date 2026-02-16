@@ -45,13 +45,15 @@ func Run() {
 		return
 	}
 
+	defer storage.ClearMasterPassword()
+
+	requireMasterPassword()
+
 	// Create or verify the existence of the underlying storage file.
 	if err := storage.Create(); err != nil {
 		fmt.Println("Error creating password file:", err)
 		return
 	}
-
-	requireMasterPassword()
 
 	// Execute LIST command.
 	if *listFlag {
@@ -126,21 +128,28 @@ func Run() {
 	}
 }
 
+// requireMasterPassword require master password.
 func requireMasterPassword() {
-	// Prompt for the master password to initialize storage access.
 	fmt.Print("Master password: ")
-	master, err := readPassword()
+	masterStr, err := readPassword()
 	if err != nil {
 		fmt.Println("Error reading password:", err)
 		return
 	}
 
-	if master == "" {
+	if masterStr == "" {
 		fmt.Println("Master password cannot be empty")
-		return
+		os.Exit(1)
 	}
 
-	storage.SetMasterPassword(master)
+	// Convert in []byte.
+	masterBytes := []byte(masterStr)
+	storage.SetMasterPassword(masterBytes)
+
+	// Clean buffer.
+	for i := range masterBytes {
+		masterBytes[i] = 0
+	}
 }
 
 // readPassword reads a password from stdin without echoing characters to the terminal.

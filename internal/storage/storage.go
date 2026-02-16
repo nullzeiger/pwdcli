@@ -24,12 +24,20 @@ import (
 // masterPassword holds the session password used to encrypt
 // and decrypt the storage file. It must be set before any
 // read or write operations.
-var masterPassword string
+var masterPassword []byte
 
 // SetMasterPassword sets the password used for encrypting
 // and decrypting the storage file.
-func SetMasterPassword(pw string) {
-	masterPassword = pw
+func SetMasterPassword(pw []byte) {
+	masterPassword = make([]byte, len(pw))
+	copy(masterPassword, pw)
+}
+
+func ClearMasterPassword() {
+	for i := range masterPassword {
+		masterPassword[i] = 0
+	}
+	masterPassword = nil
 }
 
 // Create initializes the storage file if it does not already exist.
@@ -44,7 +52,7 @@ func Create() error {
 		return nil
 	}
 
-	if masterPassword == "" {
+	if len(masterPassword) == 0 {
 		return errors.New("master password not set")
 	}
 
@@ -67,7 +75,7 @@ func Create() error {
 func Read() ([]account.Account, error) {
 	path := util.FilePath()
 
-	if masterPassword == "" {
+	if len(masterPassword) == 0 {
 		return nil, errors.New("master password not set")
 	}
 
@@ -94,7 +102,7 @@ func Read() ([]account.Account, error) {
 func Write(accounts []account.Account) error {
 	path := util.FilePath()
 
-	if masterPassword == "" {
+	if len(masterPassword) == 0 {
 		return errors.New("master password not set")
 	}
 
@@ -132,16 +140,26 @@ func Append(acc account.Account) error {
 }
 
 // deriveKey generates a 32-byte AES key from the provided password and salt.
-func deriveKey(password string, salt []byte) []byte {
+func deriveKey(password []byte, salt []byte) []byte {
+	const iterations = 100000
 	h := sha256.New()
-	h.Write([]byte(password))
+
 	h.Write(salt)
-	return h.Sum(nil)
+	h.Write([]byte(password))
+	key := h.Sum(nil)
+
+	for range iterations {
+		h.Reset()
+		h.Write(key)
+		h.Write([]byte(password))
+		key = h.Sum(nil)
+	}
+	return key
 }
 
 // encrypt encrypts the given data using AES-GCM with a key derived from the password.
 // The output format is: [16 bytes salt][nonce][ciphertext]
-func encrypt(data []byte, password string) ([]byte, error) {
+func encrypt(data []byte, password []byte) ([]byte, error) {
 	salt := make([]byte, 16)
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
 		return nil, err
@@ -173,7 +191,7 @@ func encrypt(data []byte, password string) ([]byte, error) {
 }
 
 // decrypt decrypts data produced by the encrypt function using the provided password.
-func decrypt(data []byte, password string) ([]byte, error) {
+func decrypt(data []byte, password []byte) ([]byte, error) {
 	if len(data) < 16 {
 		return nil, errors.New("invalid encrypted data")
 	}

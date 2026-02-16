@@ -20,7 +20,7 @@ func setupTempStorage(t *testing.T) string {
 	t.Setenv("HOME", tmpDir)
 
 	// Set a master password for tests
-	storage.SetMasterPassword("Passwordsupersicura")
+	storage.SetMasterPassword([]byte("Passwordsupersicura"))
 
 	path := util.FilePath()
 
@@ -118,7 +118,7 @@ func TestAppendWithoutCreate(t *testing.T) {
 	t.Setenv("HOME", tmpDir)
 
 	// Even in this test we must set a master password
-	storage.SetMasterPassword("Passwordsupersicura")
+	storage.SetMasterPassword([]byte("Passwordsupersicura"))
 
 	acc := account.Account{Website: "site.com", Username: "u", Email: "e", Pwd: "p"}
 
